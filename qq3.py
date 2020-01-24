@@ -30,6 +30,7 @@ DY = [-1, 0, 1, 0]
 
 # Dimensions of the map tiles
 MAP_TILE_WIDTH, MAP_TILE_HEIGHT = 24, 16
+FPS = 15
 
 class TileCache(object):
     """Load the tilesets lazily into global cache"""
@@ -153,16 +154,16 @@ class Player(Sprite):
         self.animation = None
         self.image = self.frames[self.direction][0]
 
-    def walk_animation(self):
+    def walk_animation(self, multiplier):
         """Animation for the player walking."""
 
         # This animation is hardcoded for 4 frames and 16x24 map tiles
         for frame in range(4):
             self.image = self.frames[self.direction][frame]
             yield None
-            self.move(3*DX[self.direction], 2*DY[self.direction])
+            self.move(3*multiplier*DX[self.direction], 2*multiplier*DY[self.direction])
             yield None
-            self.move(3*DX[self.direction], 2*DY[self.direction])
+            self.move(3*multiplier*DX[self.direction], 2*multiplier*DY[self.direction])
 
     def update(self, *args):
         """Run the current animation or just stand there if no animation set."""
@@ -299,7 +300,14 @@ class Game(object):
         self.sprites = SortedUpdates()
         self.overlays = pygame.sprite.RenderUpdates()
         self.interact = []
-        self.fuel = 100
+        self.potato = 100
+        self.weight = False
+        self.weightnum = 250
+        self.maxcapacity = 500
+        self.donation = 0
+        self.needed = 1000
+        self.deadline = 100 * FPS
+        
         self.use_level(Level())        
 
     def use_level(self, level):
@@ -316,8 +324,7 @@ class Game(object):
         self.level = level
         # Populate the game with the level's objects
         for pos, tile in level.items.items():
-            print(level.items.items())
-            if tile['name'] == 'house':
+            if (tile['name'] == 'house') or (tile['name'] == 'skeleton'):
                 x, y = pos
                 #self.interact.append([tile['name'], (x, y)])                
                 around(pos, tile['name'])
@@ -347,35 +354,54 @@ class Game(object):
 
             return self.pressed_key == key or keys[key]
 
-        def walk(d):
+        def walk(d, is_run):
             """Start walking in specified direction."""
 
             x, y = self.player.pos
             self.player.direction = d
-            if not self.level.is_blocking(x+DX[d], y+DY[d]):
-                self.player.animation = self.player.walk_animation()
+            multiplier = 1
+            if is_run is True:
+                multiplier = 2
+            if not self.level.is_blocking(x+multiplier * DX[d], y+multiplier * DY[d]):
+                self.player.animation = self.player.walk_animation(multiplier)
         
         def interact():
             """Interact with an object"""
             x, y = self.player.pos
             pos = x, y
             for i in self.interact:
-                if pos in i[1] and self.fuel > 0 :
-                    self.fuel -= 20
-                    print(self.fuel)                                        
-                    print("Interacting with ", i[0])
+                if pos in i[1] and self.potato >= 0 and self.maxcapacity > self.potato and i[0] == 'skeleton':
+                    self.potato += 1
+                if pos in i[1] and self.potato > 0 and self.maxcapacity >= self.potato and i[0] == 'house':
+                    self.potato -= 1
+                    self.donation += 1
         
-        if pressed(pg.K_UP):
-            walk(0)
-        elif pressed(pg.K_DOWN):
-            walk(2)
-        elif pressed(pg.K_LEFT):
-            walk(3)
-        elif pressed(pg.K_RIGHT):
-            walk(1)
-        elif pressed(pg.K_e):
+        keys = pygame.key.get_pressed()
+        
+        if (keys[pg.K_UP] and keys[pg.K_LSHIFT]) or keys[pg.K_UP]:
+            is_run = False
+            if keys[pg.K_LSHIFT] and self.weight == False:
+                is_run = True
+            walk(0, is_run)
+        elif (keys[pg.K_DOWN] and keys[pg.K_LSHIFT]) or keys[pg.K_DOWN]:
+            is_run = False
+            if keys[pg.K_LSHIFT] and self.weight == False:
+                is_run = True
+            walk(2, is_run)
+        elif (keys[pg.K_LEFT] and keys[pg.K_LSHIFT]) or keys[pg.K_LEFT]:
+            is_run = False
+            if keys[pg.K_LSHIFT] and self.weight == False:
+                is_run = True
+            walk(3, is_run)
+        elif (keys[pg.K_RIGHT] and keys[pg.K_LSHIFT]) or keys[pg.K_RIGHT]:
+            is_run = False
+            if keys[pg.K_LSHIFT] and self.weight == False:
+                is_run = True
+            walk(1, is_run)
+        elif keys[pg.K_e]:
             interact()
-        self.pressed_key = None
+        self.pressed_key = None        
+        
 
     def main(self):
         """Run the main loop."""
@@ -395,13 +421,23 @@ class Game(object):
             self.screen.blit(self.background, (0, 0))
         
             
-            scoretext = myfont.render("FUEL LEFT: {0}".format(self.fuel), 1, (255,255,255))
-            self.screen.blit(scoretext, (5, 250))                 
+            scoretext = myfont.render("POTATOES: {0}".format(self.potato), 1, (255,255,255))
+            self.screen.blit(scoretext, (5, 210)) 
             
+            scoretext = myfont.render("TIME LEFT BEFORE AFRICA DIES: {0}".format(self.deadline // FPS), 1, (255,255,255))
+            self.screen.blit(scoretext, (5, 230))
             
-            scoretext = myfont.render("POTATOES {0}".format(self.fuel), 1, (255,255,255))
-            self.screen.blit(scoretext, (5, 270))                 
-                
+            scoretext = myfont.render("POTATOES DONATED TO AFRICA: {0}".format(self.donation), 1, (255,255,255))
+            self.screen.blit(scoretext, (5, 250)) 
+            
+            scoretext = myfont.render("POTATOES NEEDED FOR GOAL: {0}".format(self.needed), 1, (255,255,255))
+            self.screen.blit(scoretext, (5, 270))            
+            if self.deadline != 0:
+                self.deadline -= 1
+            if self.potato >= self.weightnum:
+                self.weight = True
+            else:
+                self.weight = False
             
             # Don't clear shadows and overlays, only sprites.
             self.sprites.clear(self.screen, self.background)
@@ -424,6 +460,8 @@ class Game(object):
             clock.tick(15)
             # Process pygame events
             for event in pygame.event.get():
+                if self.deadline == 0 and self.needed != 0:
+                    self.game_over = True
                 if event.type == pg.QUIT:
                     self.game_over = True
                 elif event.type == pg.KEYDOWN:
@@ -440,5 +478,5 @@ if __name__ == "__main__":
     MAP_CACHE = TileCache(MAP_TILE_WIDTH, MAP_TILE_HEIGHT)
     TILE_CACHE = TileCache(32, 32)
     pygame.init()
-    pygame.display.set_mode((424 * 2, 320))
+    pygame.display.set_mode((MAP_TILE_WIDTH * 35, 320))
     Game().main()
