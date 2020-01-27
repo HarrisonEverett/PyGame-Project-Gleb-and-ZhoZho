@@ -1,0 +1,46 @@
+#I didnt enclude a start or end screen picure
+#Just rename the picture start.png and gameover.png
+#I encluded some music in too when u die
+
+
+def start_game():
+    canvas.fill(BLACK)
+    start_img = pygame.image.load('start.png')
+    start_img_rect = start_img.get_rect()
+    start_img_rect.center = (WINDOW_WIDTH/2, WINDOW_HEIGHT/2)
+    canvas.blit(start_img, start_img_rect)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                game_loop()
+        pygame.display.update()
+        
+def game_over():
+    pygame.mixer.music.stop()
+#If you want music you can rename the wav file and chage, else delete the music part
+#Yeah Gleb got u
+    music = pygame.mixer.Sound('insert_music.wav')
+    music.play()
+    topscore.top_score(SCORE)
+    game_over_img = pygame.image.load('end.png')
+    game_over_img_rect = game_over_img.get_rect()
+    game_over_img_rect.center = (WINDOW_WIDTH/2, WINDOW_HEIGHT/2)
+    canvas.blit(game_over_img, game_over_img_rect)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                music.stop()
+                game_loop()
+        pygame.display.update()
