@@ -1,0 +1,18 @@
+def potato_affect(effect):
+    time = 0
+    if effect is True:
+        time = -5
+    else:
+        time = 20
+        for j in self.bushstuff:
+            if j[2] > 0:
+                print("The potato something", j[2], time, j[2] + time)                                                 
+        j[2] = j[2] + time * FPS
+        if j[2] <= 0:
+            print("Collected")
+            self.potato += 200 + bonus    
+            j[1] = False
+            j[2] = -1   
+        if j[2] > 20:
+            j[1] = False
+            j[2] = -1
