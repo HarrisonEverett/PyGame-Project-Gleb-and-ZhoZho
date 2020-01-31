@@ -290,7 +290,7 @@ class Level(object):
 
 
 class Game(object):
-    """The main game object."""
+    """The main game object."""  
 
     def __init__(self):
         self.screen = pygame.display.get_surface()
@@ -299,14 +299,22 @@ class Game(object):
         self.shadows = pygame.sprite.RenderUpdates()
         self.sprites = SortedUpdates()
         self.overlays = pygame.sprite.RenderUpdates()
+        
+        self.features = ["bush", "forward", "backward", "stop", "crate"]
+        
+        self.bushstuff = []
         self.interact = []
-        self.potato = 100
+        self.potato = 499
         self.weight = False
         self.weightnum = 250
         self.maxcapacity = 500
         self.donation = 0
         self.needed = 1000
-        self.deadline = 100 * FPS
+        self.deadline = 365 * FPS
+        self.stoppedtime = 25 * FPS
+        self.is_time_stopped = False
+        
+        self.save = []
         
         self.use_level(Level())        
 
@@ -316,6 +324,10 @@ class Game(object):
             x, y = pos
             place = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
             thing = [name, place]
+            if name == "bush":
+                is_done = False
+                timeleft = -1
+                self.bushstuff.append([place, is_done, timeleft])
             self.interact.append(thing)        
     
         self.shadows = pygame.sprite.RenderUpdates()
@@ -324,7 +336,7 @@ class Game(object):
         self.level = level
         # Populate the game with the level's objects
         for pos, tile in level.items.items():
-            if (tile['name'] == 'house') or (tile['name'] == 'skeleton'):
+            if tile['name'] in self.features:
                 x, y = pos
                 #self.interact.append([tile['name'], (x, y)])                
                 around(pos, tile['name'])
@@ -362,40 +374,113 @@ class Game(object):
             multiplier = 1
             if is_run is True:
                 multiplier = 2
-            if not self.level.is_blocking(x+multiplier * DX[d], y+multiplier * DY[d]):
+            if is_run is True and self.is_time_stopped is True:
+                multiplier = 3
+            if self.level.is_blocking(x+multiplier*DX[d], y+multiplier*DY[d]):
+                multiplier = 1
+            if not self.level.is_blocking(x+DX[d], y+DY[d]):
                 self.player.animation = self.player.walk_animation(multiplier)
         
         def interact():
+            def potato_affect(effect):
+                time = 0
+                if effect is True:
+                    time = -5
+                else:
+                    time = 20
+                for j in self.bushstuff:
+                    if j[2] > 0:
+                        print("The potato something", j[2], time, j[2] + time)                                                 
+                        j[2] = j[2] + time * FPS
+                        if j[2] <= 0:
+                            self.potato += 200 + bonus    
+                            j[1] = False
+                            j[2] = -1   
+                        if j[2] > 20:
+                            j[1] = False
+                            j[2] = -1
             """Interact with an object"""
             x, y = self.player.pos
             pos = x, y
             for i in self.interact:
-                if pos in i[1] and self.potato >= 0 and self.maxcapacity > self.potato and i[0] == 'skeleton':
-                    self.potato += 1
-                if pos in i[1] and self.potato > 0 and self.maxcapacity >= self.potato and i[0] == 'house':
-                    self.potato -= 1
-                    self.donation += 1
+                if pos in i[1] and i[0] == 'forward':
+                    if self.potato >= 40:
+                        pygame.mixer.music.stop()
+                        music = pygame.mixer.Sound('rewind.wav')
+                        music.play()                        
+                        self.deadline -= 5 * FPS
+                        self.potato -= 40         
+                        potato_affect(True)
+                if pos in i[1] and i[0] == 'stop' and self.is_time_stopped is False:
+                    if self.potato >= 250:
+                        pygame.mixer.music.stop()
+                        music = pygame.mixer.Sound('stoptime.wav')
+                        music.play()                           
+                        self.is_time_stopped = True
+                        self.potato -= 250                
+                if pos in i[1] and i[0] == 'backward':
+                    if self.potato >= 40:
+                        pygame.mixer.music.stop()
+                        music = pygame.mixer.Sound('rewind.wav')
+                        music.play()                        
+                        self.deadline += 15 * FPS
+                        self.potato -= 40
+                        potato_affect(False)
+                if pos in i[1] and self.potato >= 0 and self.maxcapacity > self.potato and i[0] == 'bush':
+                    bonus = 0
+                    if self.is_time_stopped is True:
+                        bonus = 50
+                    for j in self.bushstuff:
+                        if pos in j[0]:
+                            bush = self.bushstuff.index(j)
+                                      
+                    if self.bushstuff[bush][1] is False and self.bushstuff[bush][2] < 0:
+                        self.bushstuff[bush][2] = 20 * FPS
+                        myfont = pygame.font.SysFont("monospace", 16)
+                        scoretext = myfont.render("POTATO PLANTED!", 1, (124,252,0))
+                        self.screen.blit(scoretext, (5, 330))                         
+                    elif self.bushstuff[bush][1] is True and self.bushstuff[bush][2] == 0:
+                        self.potato += 50 + bonus    
+                        self.bushstuff[bush][1] = False
+                        self.bushstuff[bush][2] = -1
+                    else:
+                        myfont = pygame.font.SysFont("monospace", 16)
+                        scoretext = myfont.render("TIME LEFT TO GROW: {0}".format(self.bushstuff[bush][2] // FPS), 1, (255,255,102))
+                        self.screen.blit(scoretext, (5, 330))                        
+                
+                if pos in i[1] and self.potato > 0  and i[0] == 'house':
+                    coef = 0
+                    maximum = 500
+                    while maximum != 0:
+                        if self.potato >= maximum:
+                            coef = maximum
+                            break
+                        else:
+                            maximum = maximum // 2
+                    self.potato -= coef
+                    self.donation += coef
+                        
         
         keys = pygame.key.get_pressed()
         
         if (keys[pg.K_UP] and keys[pg.K_LSHIFT]) or keys[pg.K_UP]:
             is_run = False
-            if keys[pg.K_LSHIFT] and self.weight == False:
+            if (keys[pg.K_LSHIFT] and self.weight == False) or (keys[pg.K_LSHIFT] and self.is_time_stopped is True):
                 is_run = True
             walk(0, is_run)
         elif (keys[pg.K_DOWN] and keys[pg.K_LSHIFT]) or keys[pg.K_DOWN]:
             is_run = False
-            if keys[pg.K_LSHIFT] and self.weight == False:
+            if (keys[pg.K_LSHIFT] and self.weight == False) or (keys[pg.K_LSHIFT] and self.is_time_stopped is True):
                 is_run = True
             walk(2, is_run)
         elif (keys[pg.K_LEFT] and keys[pg.K_LSHIFT]) or keys[pg.K_LEFT]:
             is_run = False
-            if keys[pg.K_LSHIFT] and self.weight == False:
+            if (keys[pg.K_LSHIFT] and self.weight == False) or (keys[pg.K_LSHIFT] and self.is_time_stopped is True):
                 is_run = True
             walk(3, is_run)
         elif (keys[pg.K_RIGHT] and keys[pg.K_LSHIFT]) or keys[pg.K_RIGHT]:
             is_run = False
-            if keys[pg.K_LSHIFT] and self.weight == False:
+            if (keys[pg.K_LSHIFT] and self.weight == False) or (keys[pg.K_LSHIFT] and self.is_time_stopped is True):
                 is_run = True
             walk(1, is_run)
         elif keys[pg.K_e]:
@@ -404,23 +489,50 @@ class Game(object):
         
 
     def main(self):
-        """Run the main loop."""
-
-        clock = pygame.time.Clock()
-        # Draw the whole screen initially
-        self.screen.blit(self.background, (0, 0))
-        self.overlays.draw(self.screen)
-        pygame.display.flip()
-        # The main game loop
-            
-                     
-        while not self.game_over:
-            myfont = pygame.font.SysFont("monospace", 16)
-            self.screen.fill((0,0,0))
-            
-            self.screen.blit(self.background, (0, 0))
+        def start_game():
+            self.screen.fill((0, 0, 0))
+            start_img = pygame.image.load('start.png')
+            start_img_rect = start_img.get_rect()
+            start_img_rect.center = (MAP_TILE_WIDTH * 35 / 2, MAP_TILE_HEIGHT * 23 / 2)
+            self.screen.blit(start_img, start_img_rect)
+            exit = False
+            while True:
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        exit = True
+                if exit == True:
+                    break
+                pygame.display.update()
+                
+        def game_over():
+            self.screen.fill((0, 0, 0))
+            end_img = pygame.image.load('end.png')
+            end_img_rect = end_img.get_rect()
+            end_img_rect.center = (MAP_TILE_WIDTH * 35 / 2, MAP_TILE_HEIGHT * 23 / 2)
+            self.screen.blit(end_img, end_img_rect)
+            exit = False
+            while True:
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        exit = True
+                        pygame.display.quit()
+                        pygame.quit()
+                if exit == True:
+                    break
+                pygame.display.update() 
         
-            
+        def timestop():             
+            scoretext = myfont.render("TIME STOPPED", 1, (0,0,255))                
+            self.screen.blit(scoretext, (5, 290)) 
+            scoretext = myfont.render("SECONDS LEFT: {0}".format(self.stoppedtime // FPS), 1, (0,0,255))
+            self.screen.blit(scoretext, (5, 310)) 
+            if self.stoppedtime == 0:
+                self.is_time_stopped = False
+                self.stoppedtime = 10 * FPS
+            else:
+                self.stoppedtime -= 1            
+        
+        def display():
             scoretext = myfont.render("POTATOES: {0}".format(self.potato), 1, (255,255,255))
             self.screen.blit(scoretext, (5, 210)) 
             
@@ -432,12 +544,48 @@ class Game(object):
             
             scoretext = myfont.render("POTATOES NEEDED FOR GOAL: {0}".format(self.needed), 1, (255,255,255))
             self.screen.blit(scoretext, (5, 270))            
-            if self.deadline != 0:
+        
+        def potatogrow():
+            for j in self.bushstuff:
+                if j[1] is False and j[2] > 0:
+                    j[2] -= 1
+                if j[2] == 0 and j[1] is not True:
+                    j[1] = True
+        
+        """Run the main loop."""
+        start_game()
+
+        clock = pygame.time.Clock()
+        # Draw the whole screen initially
+        self.screen.blit(self.background, (0, 0))
+        self.overlays.draw(self.screen)
+        pygame.display.flip()
+        # The main game loop
+            
+        pygame.mixer.music.stop()
+        music = pygame.mixer.Sound('music.wav')
+        music.play()                           
+        while not self.game_over:
+            
+            myfont = pygame.font.SysFont("monospace", 16)
+            self.screen.fill((0,0,0))
+            
+            self.screen.blit(self.background, (0, 0))
+            
+            if self.is_time_stopped is True:
+                timestop()
+                    
+            display()      
+            
+            if self.deadline != 0 and self.is_time_stopped is False:
                 self.deadline -= 1
             if self.potato >= self.weightnum:
                 self.weight = True
             else:
                 self.weight = False
+            
+            if self.is_time_stopped is False:
+                potatogrow()
             
             # Don't clear shadows and overlays, only sprites.
             self.sprites.clear(self.screen, self.background)
@@ -468,15 +616,21 @@ class Game(object):
                     self.pressed_key = event.key
                     
             pygame.display.flip()
-                       
+        game_over()               
+        
                     
             
-    
+#I didnt enclude a start or end screen picure
+#Just rename the picture start.png and gameover.png
+#I encluded some music in too when u die
+
+
+
            
 if __name__ == "__main__":
     SPRITE_CACHE = TileCache()
     MAP_CACHE = TileCache(MAP_TILE_WIDTH, MAP_TILE_HEIGHT)
     TILE_CACHE = TileCache(32, 32)
     pygame.init()
-    pygame.display.set_mode((MAP_TILE_WIDTH * 35, 320))
+    pygame.display.set_mode((MAP_TILE_WIDTH * 35, MAP_TILE_HEIGHT * 23))
     Game().main()
