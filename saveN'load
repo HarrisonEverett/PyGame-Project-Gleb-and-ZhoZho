@@ -1,0 +1,5 @@
+with open("savegame", "wb") as q:
+    qq3.dump(qqq, q)
+    
+with open("savegame", "rb") as q:
+    foo = qq3.load(q)
