@@ -252,7 +252,7 @@ class Game(object):
         self.maxcapacity = 500
         self.donation = 0
         self.needed = 1000
-        self.deadline = 99999 * FPS
+        self.deadline = 125 * FPS
         self.stoppedtime = 25 * FPS
         
         self.is_time_stopped = False
@@ -327,13 +327,11 @@ class Game(object):
                     time = 20
                 for j in self.bushstuff:
                     if j[2] > 0:
-                        print("The potato something", j[2], time, j[2] + time)                                                 
                         j[2] = j[2] + time * FPS
                         bonus = 0
                         if self.is_time_stopped is True:
                             bonus = 50                        
                         if j[2] <= 0:
-                            print("Collected")
                             self.potato += 50 + bonus    
                             j[1] = False
                             j[2] = -1   
@@ -377,7 +375,7 @@ class Game(object):
                                       
                     if self.bushstuff[bush][1] is False and self.bushstuff[bush][2] < 0:
                         self.bushstuff[bush][2] = 20 * FPS
-                        myfont = pygame.font.SysFont("monospace", 16)
+                        myfont = pygame.font.SysFont("Ugo", 20)
                         scoretext = myfont.render("POTATO PLANTED!", 1, (124,252,0))
                         self.screen.blit(scoretext, (5, 330))                         
                     elif self.bushstuff[bush][1] is True and self.bushstuff[bush][2] == 0:
@@ -385,7 +383,7 @@ class Game(object):
                         self.bushstuff[bush][1] = False
                         self.bushstuff[bush][2] = -1
                     else:
-                        myfont = pygame.font.SysFont("monospace", 16)
+                        myfont = pygame.font.SysFont("Ugo", 20)
                         scoretext = myfont.render("TIME LEFT TO GROW: {0}".format(self.bushstuff[bush][2] // FPS), 1, (255,255,102))
                         self.screen.blit(scoretext, (5, 330))                        
                 
@@ -434,7 +432,7 @@ class Game(object):
         elif keys[pg.K_o]:
             if self.is_time_stopped is False:
                 myfont = pygame.font.SysFont("monospace", 16)
-                scoretext = myfont.render("GAME STATE SAVED", 1, (124,252,0))
+                scoretext = myfont.render("GAME STATE SAVED", 1, (255,255,102))
                 self.screen.blit(scoretext, (550, 210))             
                 f = open("save.txt", "w", encoding="utf-8")
                 x, y = self.player.pos            
@@ -454,13 +452,13 @@ class Game(object):
                 f.close()
             else:
                 myfont = pygame.font.SysFont("monospace", 16)
-                scoretext = myfont.render("CANNOT SAVE DURING TIME STOP", 1, (124,252,0))
+                scoretext = myfont.render("CANNOT SAVE DURING TIME STOP", 1, (255,255,102))
                 self.screen.blit(scoretext, (550, 210))                     
                                     
         elif keys[pg.K_i]:
             if self.is_time_stopped is False:
                 myfont = pygame.font.SysFont("monospace", 16)
-                scoretext = myfont.render("GAME STATE LOADED", 1, (124,252,0))
+                scoretext = myfont.render("GAME STATE LOADED", 1, (255,255,102))
                 self.screen.blit(scoretext, (550, 210))            
                 f = open("save.txt", "r", encoding="utf-8")
                 lineList = [line.rstrip('\n') for line in open('save.txt')]
@@ -475,7 +473,7 @@ class Game(object):
                 f.close()
             else:
                 myfont = pygame.font.SysFont("monospace", 16)
-                scoretext = myfont.render("CANNOT LOAD DURING TIME STOP", 1, (124,252,0))
+                scoretext = myfont.render("CANNOT LOAD DURING TIME STOP", 1, (255,255,102))
                 self.screen.blit(scoretext, (550, 210))                  
         self.pressed_key = None        
         
@@ -529,16 +527,16 @@ class Game(object):
                 self.stoppedtime -= 1            
         
         def display():
-            scoretext = myfont.render("POTATOES: {0}".format(self.potato), 1, (255,255,255))
+            scoretext = myfont.render("P O T A T O  {0}".format(self.potato), 1, (255,255,255))
             self.screen.blit(scoretext, (5, 210)) 
             
-            scoretext = myfont.render("TIME LEFT BEFORE AFRICA DIES: {0}".format(self.deadline // FPS), 1, (255,255,255))
+            scoretext = myfont.render("T I M E  L E F T  {0}".format(self.deadline // FPS), 1, (255,255,255))
             self.screen.blit(scoretext, (5, 230))
             
-            scoretext = myfont.render("POTATOES DONATED TO AFRICA: {0}".format(self.donation), 1, (255,255,255))
+            scoretext = myfont.render("D O N A T E D  {0}".format(self.donation), 1, (255,255,255))
             self.screen.blit(scoretext, (5, 250)) 
             
-            scoretext = myfont.render("POTATOES NEEDED FOR GOAL: {0}".format(self.needed), 1, (255,255,255))
+            scoretext = myfont.render("G O A L  {0}".format(self.needed), 1, (255,255,255))
             self.screen.blit(scoretext, (5, 270))            
         
         def potatogrow():
@@ -560,12 +558,13 @@ class Game(object):
         music = pygame.mixer.Sound('music.wav')
         music.play()                           
         while not self.game_over:
-            myfont = pygame.font.SysFont("monospace", 16)
+            myfont = pygame.font.SysFont("Ugo", 20)
             self.screen.fill((0,0,0))
                      
             
             if self.is_game_paused is True:
-                scoretext = myfont.render("It is okay, gardener, take your time.", 1, (255,255,255))
+                pausefont = pygame.font.SysFont("monospace", 16)
+                scoretext = pausefont.render("It is okay, gardener, take your time.", 1, (255,255,255))
                 self.screen.blit(scoretext, (MAP_TILE_WIDTH * 35 / 2 - 200, MAP_TILE_HEIGHT * 23 / 2))                
                 for event in pygame.event.get():
                     if event.type == pg.KEYDOWN:    
