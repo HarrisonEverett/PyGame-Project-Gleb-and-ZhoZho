@@ -261,8 +261,6 @@ class Game(object):
         
         self.good_ending = False
         
-        self.last_save = []
-        
         self.use_level(Level())        
 
     def use_level(self, level):
@@ -434,20 +432,51 @@ class Game(object):
             else:
                 self.is_game_paused = False
         elif keys[pg.K_o]:
-            
-            f = open("save.txt", "w", encoding="utf-8")
-            f.write(str(self.potato))
-            f.write('\n')
-            f.write(str(self.donation))
-            f.write('\n')
-            f.write(str(self.deadline))
-            f.close()
+            if self.is_time_stopped is False:
+                myfont = pygame.font.SysFont("monospace", 16)
+                scoretext = myfont.render("GAME STATE SAVED", 1, (124,252,0))
+                self.screen.blit(scoretext, (550, 210))             
+                f = open("save.txt", "w", encoding="utf-8")
+                x, y = self.player.pos            
+                f.write(str(self.potato))
+                f.write('\n')
+                f.write(str(self.donation))
+                f.write('\n')
+                f.write(str(self.deadline))
+                f.write('\n')
+                f.write(str(x))
+                f.write('\n')
+                f.write(str(y))
+                f.write('\n')
+                #f.write(str(self.is_time_stopped))
+                #f.write('\n')
+                #print(str(self.is_time_stopped))
+                f.close()
+            else:
+                myfont = pygame.font.SysFont("monospace", 16)
+                scoretext = myfont.render("CANNOT SAVE DURING TIME STOP", 1, (124,252,0))
+                self.screen.blit(scoretext, (550, 210))                     
                                     
         elif keys[pg.K_i]:
-            lineList = [line.rstrip('\n') for line in open('save.txt')]
-            self.potato = int(lineList[0])
-            self.donation = int(lineList[1])
-            self.deadline = int(lineList[2])
+            if self.is_time_stopped is False:
+                myfont = pygame.font.SysFont("monospace", 16)
+                scoretext = myfont.render("GAME STATE LOADED", 1, (124,252,0))
+                self.screen.blit(scoretext, (550, 210))            
+                f = open("save.txt", "r", encoding="utf-8")
+                lineList = [line.rstrip('\n') for line in open('save.txt')]
+                self.potato = int(lineList[0])
+                self.donation = int(lineList[1])
+                self.deadline = int(lineList[2])
+                x = int(lineList[3])
+                y = int(lineList[4])
+                self.player.pos = (x, y)
+                #self.is_time_stopped = bool(lineList[5]) 
+                #print(bool(lineList[5]))
+                f.close()
+            else:
+                myfont = pygame.font.SysFont("monospace", 16)
+                scoretext = myfont.render("CANNOT LOAD DURING TIME STOP", 1, (124,252,0))
+                self.screen.blit(scoretext, (550, 210))                  
         self.pressed_key = None        
         
 
@@ -586,7 +615,7 @@ class Game(object):
             for event in pygame.event.get():
                 if self.deadline == 0 and self.needed != 0:
                     self.game_over = True
-                if self.donation == self.needed:
+                if self.donation >= self.needed:
                     self.good_ending = True
                     self.game_over = True
                 if event.type == pg.QUIT:
